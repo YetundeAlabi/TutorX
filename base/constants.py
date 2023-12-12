@@ -1,0 +1,2 @@
+PRESENT = "Present"
+ABSENT = "Absent"
