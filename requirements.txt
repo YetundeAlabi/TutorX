@@ -1,0 +1,11 @@
+annotated-types==0.6.0
+asgiref==3.7.2
+Django==5.0
+django-ninja==1.1.0
+psycopg2-binary==2.9.9
+pydantic==2.5.2
+pydantic_core==2.14.5
+python-decouple==3.8
+sqlparse==0.4.4
+typing_extensions==4.9.0
+tzdata==2023.3

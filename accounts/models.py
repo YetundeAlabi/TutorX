@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 
 from base.models import BaseModel
-from payments.models import Level
+from payments.models import Level, SalaryCycle
 # Create your models here.
 
 User = get_user_model()
@@ -33,8 +33,9 @@ class Attendance(BaseModel):
     clock_in= models.DateTimeField()
     clock_out = models.DateTimeField(null=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
+    salary_cycle = models.ForeignKey(SalaryCycle, on_delete=models.CASCADE)
     # status = models.CharField(max_length=8, choices=ATTENDANCE_STATUS, default=ABSENT)
     present = models.BooleanField(default=True) 
 
     def __str__(self):
-        return self.Teacher.email
+        return self.teacher.email
