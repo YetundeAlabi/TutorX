@@ -12,6 +12,8 @@ class SalaryCycle(BaseModel):
 class Level(BaseModel):
     name = models.CharField(max_length=50)
     pay_grade = models.PositiveIntegerField()
+    order = models.AutoField()
+
 
     def __str__(self):
         return self.name
