@@ -131,7 +131,7 @@ def generate_payment_slip(request):
 
     current_salary_cycle = SalaryCycle.active_objects.filter(
         start_date__lte=current_date, end_date__gte=current_date).first()
-    # Attendance.objects.filter(date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date))
+    
     if current_date != current_salary_cycle.end_date:
         return 400, {"error": f"Payment slip cannot be generated til {current_salary_cycle.end_date}."}
 

@@ -104,7 +104,6 @@ async def bulk_upload_teachers(request, file: UploadedFile = File(...)):
         teachers, _ = Teacher.active_objects.aget_or_create(first_name=row[0], last_name=row[1], email=row[2], level=level,
                                                             account_number=row[4], bank=row[5], account_name=[6])
         return teachers
-        # write a management script to create admins
 
 
 @router.post('/attendance', response={200: Success, codes_4xx: Error})
@@ -131,9 +130,7 @@ async def register_attendance(request, payload: AttendenceSchema):
     if attendance_obj.clock_out is not None:
         return 400, {"error": ResponseMessages.DUPLICATE_CLOCK_OUT}
 
-    #     attendance.clock_out
     await qs.aupdate(clock_out=dt)
-    # await Attendance.active_objects.filter(teacher=teacher, date=dt.date(), clock_out__isnull=True).aupdate(clock_out=dt)
     return 200, {"message": f"Clock out at {dt.strftime('%H:%M:%S')} successful"}
 
 # promotion and demotion
