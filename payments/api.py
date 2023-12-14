@@ -2,7 +2,7 @@ from typing import List
 from asgiref.sync import sync_to_async
 
 from django.utils import timezone
-from django.db.models import F, Sum, DecimalField
+from django.db.models import F, Sum, DecimalField, FloatField, ExpressionWrapper
 
 from ninja import Router
 from ninja.responses import codes_4xx
@@ -22,9 +22,9 @@ router = Router(tags=['Payments'])
 @router.post("/salary-cycle", response={200: SalaryCycleSchema, codes_4xx: Error})
 async def create_salary_cycle(request, payload: SalaryCycleSchema):
     """ create a salary cycle"""
-    if await SalaryCycle.objects.filter(start_date=payload.start_date, end_date=payload.end_date).aexists():
+    if await SalaryCycle.active_objects.filter(start_date=payload.start_date, end_date=payload.end_date).aexists():
         return 400, {"error": "Salary Cycle already exists"}
-    
+
     salary_cycle = await SalaryCycle.objects.acreate(**payload.dict())
     return salary_cycle
 
@@ -45,7 +45,7 @@ async def get_all_salary_cycle(request):
 
 
 @router.patch("/salary-cycle/{id}/update", response={200: SalaryCycleSchema, codes_4xx: Error})
-async def update_salary_cycle(request, id: int,data: SalaryCycleSchema):
+async def update_salary_cycle(request, id: int, data: SalaryCycleSchema):
     """ update salary cycle"""
     salary_cycle = await SalaryCycle.active_objects.filter(pk=id).afirst()
     if not salary_cycle:
@@ -91,7 +91,7 @@ async def get_level(request, id: int):
 @router.get("/level", response={200: List[LevelSchema], codes_4xx: Error})
 async def get_all_level(request):
     """ get all salary cycle"""
-    return await Level.active_objects.all()
+    return await sync_to_async(list)(Level.active_objects.all())
 
 
 @router.patch("/level/{id}/update", response={200: LevelSchema, codes_4xx: Error})
@@ -125,17 +125,19 @@ async def delete_level(request, id: int):
     return 200, {"message": "Level deleted successfully"}
 
 
-@router.get("/salary-slip", response={200: List[PaymentSlipSchema]})
+@router.get("/salary-slip", response={200: List[PaymentSlipSchema], 400: Error})
 def generate_payment_slip(request):
     """ get total work hour of the current salary cycle of teachers """
     current_date = timezone.now().date()
-    current_salary_cycle = SalaryCycle.objects.filter(
+
+    current_salary_cycle = SalaryCycle.active_objects.filter(
         start_date__lte=current_date, end_date__gte=current_date).first()
     # Attendance.objects.filter(date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date))
+    if current_date != current_salary_cycle.end_date:
+        return 400, {"error": f"Payment slip cannot be generated til {current_salary_cycle.end_date}."}
 
-    qs = Teacher.objects.values("email", "account_number").annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
-                                  )).filter(attendance__date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date)
-                                            ).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade')))
-    
-    print(qs)
+    qs = Teacher.active_objects.values("email", "account_number").annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
+                                                                            )).filter(attendance__date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date)
+                                                                            ).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade')))
+    # print(qs)
     return qs

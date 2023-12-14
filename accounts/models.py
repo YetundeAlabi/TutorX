@@ -27,8 +27,6 @@ class Teacher(BaseModel):
     def __str__(self):
         return self.email
     
-
-
         
 class Attendance(BaseModel):
     date = models.DateField()
@@ -43,8 +41,9 @@ class Attendance(BaseModel):
         return self.teacher.email
     
 
-class Promotion(BaseModel):
+class PromotionDemotion(BaseModel):
     salary_cycle = models.ForeignKey(SalaryCycle, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    is_promoted = models.BooleanField(default=False)
+    is_promoted = models.BooleanField()
     level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, related_name="promotion_level")
+    status = models.BooleanField()

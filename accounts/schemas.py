@@ -19,9 +19,10 @@ class AttendenceSchema(Schema):
     email: str
 
 
-class PromotionSchema(Schema):
-    email: str
+class PromotionDemotionSchema(Schema):
+    salary_cycle_id : int
+    teacher_id : int
+    is_promoted: bool
     level_id : int
-
-
+    status : bool
    

@@ -136,3 +136,16 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
+# celery
+CELERY_BROKER_URL = config("CELERY_BROKER", default="redis://redis:6379")
+CELERY_RESULT_BACKEND = config("CELERY_BACKEND", default="redis://redis:6379")
+if CELERY_RESULT_BACKEND == "django-db":
+    INSTALLED_APPS += [
+        "django_celery_results",
+    ]
+
+CELERY_ACCEPT_CONTENT = ["application/json"]
+CELERY_RESULT_SERIALIZER = "json"
+CELERY_TASK_SERIALIZER = "json"
+CELERY_TIMEZONE = "Africa/Lagos"
+CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
