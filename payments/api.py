@@ -2,13 +2,13 @@ from typing import List
 from asgiref.sync import sync_to_async
 
 from django.utils import timezone
-from django.db.models import F, Sum, DecimalField, FloatField, ExpressionWrapper
+from django.db.models import F, Sum
 
 from ninja import Router
 from ninja.responses import codes_4xx
 
 from payments.models import Level, SalaryCycle
-from accounts.models import Attendance, Teacher
+from accounts.models import Teacher
 from base.schemas import Success, Error
 from payments.schemas import LevelCreateSchema, SalaryCycleSchema, LevelSchema, PaymentSlipSchema
 from base.messages import ResponseMessages
@@ -16,9 +16,8 @@ from base.messages import ResponseMessages
 
 router = Router(tags=['Payments'])
 
+
 # SALARY CYCLE
-
-
 @router.post("/salary-cycle", response={200: SalaryCycleSchema, codes_4xx: Error})
 async def create_salary_cycle(request, payload: SalaryCycleSchema):
     """ create a salary cycle"""
@@ -136,8 +135,10 @@ def generate_payment_slip(request):
     if current_date != current_salary_cycle.end_date:
         return 400, {"error": f"Payment slip cannot be generated til {current_salary_cycle.end_date}."}
 
-    qs = Teacher.active_objects.values("email", "account_number").annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
-                                                                            )).filter(attendance__date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date)
-                                                                            ).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade')))
+    qs = Teacher.active_objects.filter(attendence__clock_out__isnull=False
+                                       ).values("email", "account_number"
+                                        ).annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
+                                        )).filter(attendance__date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date)
+                                        ).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade')))
     # print(qs)
     return qs
