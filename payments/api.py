@@ -1,7 +1,8 @@
 from typing import List
+from asgiref.sync import sync_to_async
 
 from django.utils import timezone
-from django.db.models import F, fields
+from django.db.models import F, Sum, DecimalField
 
 from ninja import Router
 from ninja.responses import codes_4xx
@@ -9,21 +10,26 @@ from ninja.responses import codes_4xx
 from payments.models import Level, SalaryCycle
 from accounts.models import Attendance, Teacher
 from base.schemas import Success, Error
-from payments.schemas import LevelCreateSchema, SalaryCycleSchema, LevelSchema
+from payments.schemas import LevelCreateSchema, SalaryCycleSchema, LevelSchema, PaymentSlipSchema
 from base.messages import ResponseMessages
 
 
-router = Router(tags=['Payment'])
+router = Router(tags=['Payments'])
 
-#SALARY CYCLE
-@router.post("/salary-cycle")
+# SALARY CYCLE
+
+
+@router.post("/salary-cycle", response={200: SalaryCycleSchema, codes_4xx: Error})
 async def create_salary_cycle(request, payload: SalaryCycleSchema):
     """ create a salary cycle"""
+    if await SalaryCycle.objects.filter(start_date=payload.start_date, end_date=payload.end_date).aexists():
+        return 400, {"error": "Salary Cycle already exists"}
+    
     salary_cycle = await SalaryCycle.objects.acreate(**payload.dict())
     return salary_cycle
 
 
-@router.get("/salary-cycle/{id}", response={200:SalaryCycleSchema, codes_4xx: Error})
+@router.get("/salary-cycle/{id}", response={200: SalaryCycleSchema, codes_4xx: Error})
 async def get_salary_cycle(request, id: int):
     """ get a single salary-cycle"""
     salary_cycle = await SalaryCycle.active_objects.filter(pk=id).afirst()
@@ -32,14 +38,14 @@ async def get_salary_cycle(request, id: int):
     return salary_cycle
 
 
-@router.get("/salary-cycle", response={200:List[SalaryCycleSchema], codes_4xx:Error})
+@router.get("/salary-cycle", response={200: List[SalaryCycleSchema], codes_4xx: Error})
 async def get_all_salary_cycle(request):
-    """ get all salary cycle"""
-    return await SalaryCycle.active_objects.all()
+    """ get all salary cycle. turn to list to get all object asynchoronously"""
+    return await sync_to_async(list)(SalaryCycle.active_objects.all())
 
 
-@router.patch("/salary-cycle/{id}/update", response={200: SalaryCycle, codes_4xx:Error})
-async def update_salary_cycle(request, data: SalaryCycleSchema):
+@router.patch("/salary-cycle/{id}/update", response={200: SalaryCycleSchema, codes_4xx: Error})
+async def update_salary_cycle(request, id: int,data: SalaryCycleSchema):
     """ update salary cycle"""
     salary_cycle = await SalaryCycle.active_objects.filter(pk=id).afirst()
     if not salary_cycle:
@@ -54,17 +60,18 @@ async def update_salary_cycle(request, data: SalaryCycleSchema):
     await salary_cycle.asave(update_fields=field_names)
     return salary_cycle
 
+
 @router.delete("/salary-cycle/{id}", response={200: Success, codes_4xx: Error})
 async def delete_salary_cycle(request, id: int):
     salary_cycle = await SalaryCycle.active_objects.filter(pk=id).afirst()
     if not salary_cycle:
         return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
-    
+
     await salary_cycle.adelete()
     return 200, {"message": "Salary cycle deleted successfully"}
 
 
-#LEVEL
+# LEVEL
 @router.post("/level/create", response={200: LevelSchema})
 async def create_level(request, payload: LevelCreateSchema):
     """ create a level"""
@@ -88,7 +95,7 @@ async def get_all_level(request):
 
 
 @router.patch("/level/{id}/update", response={200: LevelSchema, codes_4xx: Error})
-async def update_level(request, data: LevelSchema):
+async def update_level(request, id: int, data: LevelSchema):
     """ update salary cycle"""
     level = await Level.active_objects.filter(pk=id).afirst()
     if not level:
@@ -109,24 +116,26 @@ async def delete_level(request, id: int):
     level = await Level.active_objects.filter(pk=id).afirst()
     if not level:
         return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
-    
-    #level cannot be deleted if teachers are in it
+
+    # level cannot be deleted if teachers are in it
     if await level.teachers.acount() != 0:
         return 400, {"error": "Level cannot be deleted. Teachers are associated with it"}
-    
+
     await level.adelete()
     return 200, {"message": "Level deleted successfully"}
 
 
-
-
-@router.get("/payment")
+@router.get("/salary-slip", response={200: List[PaymentSlipSchema]})
 def generate_payment_slip(request):
     """ get total work hour of the current salary cycle of teachers """
     current_date = timezone.now().date()
-    current_salary_cycle = SalaryCycle.objects.filter(start_date__lte=current_date, end_date__gte=current_date).first()
-    Attendance.objects.filter(date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date))
+    current_salary_cycle = SalaryCycle.objects.filter(
+        start_date__lte=current_date, end_date__gte=current_date).first()
+    # Attendance.objects.filter(date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date))
 
-    qs = Teacher.objects.annotate(total_work_hours=F('attendance__clock_out') - F('attendance__clock_in')
-                                  ).filter(attendance__date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date)
-                                ).values_list
+    qs = Teacher.objects.values("email", "account_number").annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
+                                  )).filter(attendance__date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date)
+                                            ).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade')))
+    
+    print(qs)
+    return qs

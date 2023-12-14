@@ -22,3 +22,6 @@ class AttendenceSchema(Schema):
 class PromotionSchema(Schema):
     email: str
     level_id : int
+
+
+   

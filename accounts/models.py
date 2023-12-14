@@ -10,7 +10,7 @@ User = get_user_model()
 
 class Admin(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='admin_user')
-    is_admin = models.BooleanField(default=False)
+    is_admin = models.BooleanField(default=True)
 
 
 class Teacher(BaseModel):
@@ -27,8 +27,7 @@ class Teacher(BaseModel):
     def __str__(self):
         return self.email
     
-    # def total_work_hour(self):
-    #     return self.attendance.
+
 
         
 class Attendance(BaseModel):
@@ -48,3 +47,4 @@ class Promotion(BaseModel):
     salary_cycle = models.ForeignKey(SalaryCycle, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     is_promoted = models.BooleanField(default=False)
+    level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, related_name="promotion_level")

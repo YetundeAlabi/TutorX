@@ -28,6 +28,10 @@ async def onboard_teachers(request, payload: TeacherSchema):
     # check if level exist
     if not await Level.active_objects.filter(id=payload.level_id).aexists():
         return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
+    
+    if await Teacher.objects.filter(account_number=payload.account_number).aexists():
+        return 400, {"error": "Account number already exist"}
+    
     await Teacher.objects.acreate(**payload.dict())
     return 200, {"message": "Teacher created successfully"}
 
