@@ -8,7 +8,6 @@ class SalaryCycle(BaseModel):
     start_date = models.DateField()
     end_date = models.DateField()
     average_work_hour = models.PositiveIntegerField()
-    cycle_days = models.PositiveBigIntegerField(null=True)
 
 
 

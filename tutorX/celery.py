@@ -1,12 +1,10 @@
 import os
 from celery import Celery
 from celery.schedules import crontab
-from django.conf import settings
 
-# Set the default Django settings module for the 'celery' program.
+
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'tutorX.settings')
 
-# Replace 'your_project' with your project's name.
 app = Celery('tutorX')
 
 # Configure Celery using settings from Django settings.py.
@@ -17,5 +15,5 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     "send_payment_slip_for_teacher_on_salary_cycle_end_date": {
         "task": 'payments.tasks.send_teacher_pay_slip',
-        'schedule': crontab(minute=24, hour=8),
+        'schedule': crontab(minute=0, hour=11),
     }}

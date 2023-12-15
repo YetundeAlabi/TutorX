@@ -9,7 +9,7 @@ https://docs.djangoproject.com/en/5.0/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.0/ref/settings/
 """
-
+import os
 from pathlib import Path
 from decouple import config
 from datetime import timedelta
@@ -43,6 +43,7 @@ INSTALLED_APPS = [
     'accounts',
     'payments',
     "django_celery_beat",
+    "djcelery_email",
 ]
 
 MIDDLEWARE = [
@@ -60,7 +61,7 @@ ROOT_URLCONF = 'tutorX.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'tutorX/templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -89,12 +90,6 @@ DATABASES = {
         'PORT': config("DB_PORT", default="")
     }
 }
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
-#     }
-# }
 
 
 # Password validation
@@ -173,5 +168,5 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = SERVER_EMAIL
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
-EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+# EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

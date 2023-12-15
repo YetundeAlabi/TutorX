@@ -8,3 +8,4 @@ class ResponseMessages:
     DUPLICATE_CLOCK_OUT = "You are already clocked out"
     WRONG_CREDENTIALS_MSG = "Incorrect email or password"
     INVALID_TOKEN_MSG = "Invalid token"
+    EXISTING_LEVEL ="You are already on this level"

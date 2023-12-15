@@ -485,20 +485,30 @@
                                                             <tbody>
                                                                 <tr>
                                                                     <td>
-                                                                        <h3>Total Work Hours:</h3>
+                                                                        <h3>Account Number:</h3>
                                                                     </td>
                                                                     <td>
-                                                                        <h3 class="align-right">{{total_work_hours}}</h3>
+                                                                        <h3 class="align-right">{{account_number}}</h3>
                                                                     </td>
                                                                 </tr>
                             
                                                                 <tr>
                                                                     <td>
-                                                                        <h3>Account Number:</h3>
+                                                                        <h3> Total Work Hours:</h3>
                                                                     </td>
                                                                     <td>
                                                                         <h3 class="align-right">
-                                                                            {{account_number}}
+                                                                        {{total_work_hours}} Hours 
+                                                                        </h3>
+                                                                    </td>
+                                                                </tr>
+                                                                <tr>
+                                                                    <td>
+                                                                        <h3> Pay Per Hour:</h3>
+                                                                    </td>
+                                                                    <td>
+                                                                        <h3 class="align-right">
+                                                                            ₦{{pay_per_hour}}/hr
                                                                         </h3>
                                                                     </td>
                                                                 </tr>
@@ -507,7 +517,7 @@
                                                                         <table class="purchase_content" width="100%"
                                                                             cellpadding="0" cellspacing="0">
                                                                             <tbody>
-                                                                                <tr>
+                                                                                <!-- <tr>
                                                                                     <th class="purchase_heading"
                                                                                         align="left">
                                                                                         <p class="f-fallback">
@@ -529,11 +539,12 @@
                                                                                         <span
                                                                                             class="f-fallback">{{total_pay}}</span>
                                                                                     </td>
-                                                                                </tr>
-                                                                                <tr>
+                                                                                </tr> -->
+                                                                                <tr >
                                                                                     <td width="80%"
                                                                                         class="purchase_footer"
-                                                                                        valign="middle">
+                                                                                        valign="middle" style="display: flex;">
+                                                                                        
                                                                                         <p
                                                                                             class="f-fallback purchase_total purchase_total--label">
                                                                                             Total pay
@@ -544,7 +555,7 @@
                                                                                         valign="middle">
                                                                                         <p
                                                                                             class="f-fallback purchase_total">
-                                                                                            {{total_pay}}
+                                                                                            ₦{{total_pay}}
                                                                                         </p>
                                                                                     </td>
                                                                                 </tr>

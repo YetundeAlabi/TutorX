@@ -9,9 +9,9 @@ from payments.models import SalaryCycle, Level
 
 
 class BulkCreateCycleSchema(Schema):
-    cycle_days : int
+    days_in_cycle : int
     average_work_hour: int
-    number : int
+    number_of_cycle : int
     start_date : date
 
 
@@ -23,14 +23,14 @@ class SalaryCycleSchema(ModelSchema):
 
 class LevelCreateSchema(Schema):
     name: str
-    pay_grade: int
+    pay_grade: float
 
 
-class LevelSchema(ModelSchema):
-    class Config:
-        model = Level
-        model_fields = ["id", "name", "pay_grade"]
-
+class LevelSchema(Schema):
+    id: int
+    name: str
+    pay_grade: float
+    
 
 class PaymentSlipSchema(Schema):
     email: str

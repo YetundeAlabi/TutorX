@@ -25,11 +25,11 @@ class Teacher(BaseModel):
     def __str__(self):
         return self.email
     
-    # def get_promoted_or_demoted(self, current_salary_cycle):
-    #     #change the level of a teacher if they get prompted or demoted in this current cycle
-    #     self.promotion_demotion.filter(salary_cycle=current_salary_cycle).level = self.level
-    #     self.save(update_fields=['level'])
-    
+    @property
+    def full_name(self):
+        return f'{self.first_name} {self.last_name}'
+
+
 class Attendance(BaseModel):
     date = models.DateField()
     clock_in= models.DateTimeField()
@@ -44,6 +44,7 @@ class Attendance(BaseModel):
 class PromotionDemotion(BaseModel):
     salary_cycle = models.ForeignKey(SalaryCycle, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
-    is_promoted = models.BooleanField()
+    is_promoted = models.BooleanField(default=False)
+    is_demoted = models.BooleanField(default=False)
     level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, related_name="promotion_level")
-    status = models.BooleanField()
+    

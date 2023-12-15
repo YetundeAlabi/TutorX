@@ -1,7 +1,3 @@
-from datetime import datetime
-from pydantic import Field
-from typing import Optional
-
 from ninja import Schema
 
 class TokenSchema(Schema):
@@ -26,10 +22,18 @@ class AttendenceSchema(Schema):
     email: str
 
 
-class PromotionDemotionSchema(Schema):
+class PromotionSchema(Schema):
     salary_cycle_id : int
-    teacher_id : int
-    is_promoted: bool
+    email : str
+    is_promoted: bool = True
     level_id : int
-    status : bool
+
+
+class DemotionSchema(Schema):
+    salary_cycle_id : int
+    email : str
+    is_demoted: bool = True
+    level_id : int
+
+
    

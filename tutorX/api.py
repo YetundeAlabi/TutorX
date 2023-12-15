@@ -30,7 +30,6 @@ def exception_handler_base(request, exc, msg=None, status=http.HTTPStatus.INTERN
     return api.create_response(
         request,
         {"message": "An error has occurred",
-         #  'error': msg if msg else str(exc) if settings.DEBUG else "Please contact admin"},
          'error': msg if msg else traceback.format_exc() if settings.DEBUG else "Please contact admin"},
         status=status,
     )
