@@ -216,6 +216,3 @@ async def demoted_teacher(request, payload: DemotionSchema):
     teacher.save(update_fields=["level"])
 
     return {"message": f"{teacher.full_name} has been demoted to {level.name}"}
-
-    # get the promotion obj of teacher in for this salary_cycle
-    # teacher.get_promoted_or_demoted()
