@@ -4,6 +4,13 @@ from typing import Optional
 
 from ninja import Schema
 
+class TokenSchema(Schema):
+    access: str
+    refresh: str = None
+
+class LoginSchema(Schema):
+    email: str
+    password : str
 
 class TeacherSchema(Schema):
     first_name: str

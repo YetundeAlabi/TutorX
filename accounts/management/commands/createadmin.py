@@ -12,8 +12,8 @@ class Command(BaseCommand):
 
     def handle(self, *args, **kwargs):
         username = input("Username: ")
-        email = input("Email: ")
+        # email = input("Email: ")
         password = getpass(prompt="Password: ")
-        user = User.objects.create_user(username=username, email=email, password=password)
+        user = User.objects.create_user(username=username, password=password)
         Admin.objects.create(user=user)
         print("! Admin created successfully")

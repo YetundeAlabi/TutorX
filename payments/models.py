@@ -8,13 +8,7 @@ class SalaryCycle(BaseModel):
     start_date = models.DateField()
     end_date = models.DateField()
     average_work_hour = models.PositiveIntegerField()
-
-    # def save(self, *args, **kwargs):
-    #     """check if a start date and end date is not in an existing salary cycle """
-    #     if not SalaryCycle.objects.filter(
-    #         Q(start_date__range=[self.start_date, self.end_date]) |
-    #         Q(end_date__range=[self.start_date, self.end_date])).exists:
-    #         super().save(*args, **kwargs)
+    cycle_days = models.PositiveBigIntegerField(null=True)
 
 
 

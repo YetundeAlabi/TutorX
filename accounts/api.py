@@ -1,5 +1,4 @@
 import csv
-from datetime import datetime
 from typing import List
 from asgiref.sync import sync_to_async
 
@@ -11,7 +10,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from accounts.models import PromotionDemotion, Teacher, Attendance
-from accounts.schemas import TeacherSchema, AttendenceSchema, PromotionDemotionSchema
+from accounts.schemas import TeacherSchema, AttendenceSchema, PromotionDemotionSchema, LoginSchema, TokenSchema
+from accounts.auth import JWTAuth
 from payments.models import Level, SalaryCycle
 from base.schemas import Success, Error
 from base.messages import ResponseMessages
@@ -19,9 +19,40 @@ from base.messages import ResponseMessages
 User = get_user_model()
 router = Router(tags=['Account'])
 
+
+@router.post("/login", response={200: TokenSchema, codes_4xx: Error}, auth=None)
+async def login(request, payload: LoginSchema):
+    user = await User.objects.filter(username=payload.email).afirst()
+    if not user:
+        return 400, {"error": ResponseMessages.WRONG_CREDENTIALS_MSG}
+
+    if not user.check_password(payload.password):
+        return 400, {"error": ResponseMessages.WRONG_CREDENTIALS_MSG}
+
+    access, refresh = JWTAuth(user).generate_token_pair()
+    return 200, {"access": access, "refresh": refresh}
+
+
+@router.post("/token/refresh", response={200: TokenSchema, codes_4xx: Error})
+def refresh_token(request, token: str):
+    """
+    refresh access token
+    """
+    payload = JWTAuth().decode_refresh_token(token)
+    if not payload.get("ref") and not payload.get("ref"):
+        return 400, {"error": ResponseMessages.INVALID_TOKEN_MSG}
+
+    email = payload["user"]["email"]
+    user_obj = User.objects.filter(email=email).first()
+    if not user_obj:
+        return 400, {"error": ResponseMessages.WRONG_CREDENTIALS_MSG}
+
+    access = JWTAuth(user_obj).generate_access_token()
+    return {"access": access}
+
+
+
 # onboard teachers
-
-
 @router.post("/teachers/create", response={200: Success, codes_4xx: Error})
 # is admin permissions
 async def onboard_teachers(request, payload: TeacherSchema):
@@ -80,7 +111,8 @@ async def delete_teacher(request, id: int):
     return 200, {"message": "Teacher deleted successfully"}
 
 
-@router.post("/import/teachers")  # move to management command
+# move to management command
+@router.post("/import/teachers", response={200: Success, codes_4xx: Error})
 async def bulk_upload_teachers(request, file: UploadedFile = File(...)):
     if not file.name.endswith('csv'):
         return 400, {"error": ResponseMessages.INVALID_FILE_FORMAT}
@@ -96,14 +128,15 @@ async def bulk_upload_teachers(request, file: UploadedFile = File(...)):
     for row in reader:
         # check if level_id exists
         try:
-            level = Level.active_objects.get(id=row[3])
+            level = await Level.active_objects.get(id=row[3])
         except Level.DoesNotExist:
             # append error
             errors.append(f'Level with {row[3]} does not exist')
             continue
-        teachers, _ = Teacher.active_objects.aget_or_create(first_name=row[0], last_name=row[1], email=row[2], level=level,
+        teachers, _ = await Teacher.active_objects.aget_or_create(first_name=row[0], last_name=row[1], email=row[2], level=level,
                                                             account_number=row[4], bank=row[5], account_name=[6])
-        return teachers
+        return 200, {"message": "Teacher created successfully"}
+
 
 
 @router.post('/attendance', response={200: Success, codes_4xx: Error})
@@ -122,7 +155,6 @@ async def register_attendance(request, payload: AttendenceSchema):
         return 200, {"message": f"Clock in at {dt.strftime('%H:%M:%S')} successful"}
 
     # can only clock out atleast one hour after clock in
-    # attendance = await Attendance.active_objects.filter(teacher=teacher, date=dt.date()).afirst()
     attendance_obj = await qs.afirst()
     if not dt > attendance_obj.clock_in + timezone.timedelta(hours=1):
         return 400, {"error": ResponseMessages.DUPLICATE_CLOCK_IN}
@@ -136,16 +168,24 @@ async def register_attendance(request, payload: AttendenceSchema):
 # promotion and demotion
 
 
-@router.post('/promotion', response={200: Success, codes_4xx: Error})
-async def promote_teacher(request, payload: PromotionDemotionSchema):
+@router.post('/promotion-demotion', response={200: Success, codes_4xx: Error})
+async def promote_or_demoted_teacher(request, payload: PromotionDemotionSchema):
 
-    if not await Teacher.active_objects.filter(email=payload.email).afirst():
+    teacher = await Teacher.active_objects.filter(email=payload.email).afirst()
+    if not teacher:
         return 400, {"error": ResponseMessages.TEACHER_NOT_FOUND}
 
-    if not await Level.active_objects.filter(id=payload.level_id).aexists():
+    level = await Level.active_objects.filter(id=payload.level_id).afirst()
+    if not level:
         return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
 
     if not await SalaryCycle.active_objects.filter(id=payload.salary_cycle_id).afirst():
         return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
 
-    PromotionDemotion.objects.acreate()
+    await PromotionDemotion.objects.acreate(**payload.dict())
+
+    teacher.level = level
+    teacher.save(update_fields=["level"])
+    
+    #get the promotion obj of teacher in for this salary_cycle
+    # teacher.get_promoted_or_demoted()

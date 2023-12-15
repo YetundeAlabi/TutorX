@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 
 from pathlib import Path
 from decouple import config
+from datetime import timedelta
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -41,6 +42,7 @@ INSTALLED_APPS = [
 
     'accounts',
     'payments',
+    "django_celery_beat",
 ]
 
 MIDDLEWARE = [
@@ -138,7 +140,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # celery
 CELERY_BROKER_URL = config("CELERY_BROKER", default="redis://127.0.0.1:6379")
-CELERY_RESULT_BACKEND = config("CELERY_BACKEND", default="redis://redis:6379")
+# CELERY_RESULT_BACKEND = config("CELERY_BACKEND", default="redis://redis:6379")
+CELERY_RESULT_BACKEND = "django-db"
 if CELERY_RESULT_BACKEND == "django-db":
     INSTALLED_APPS += [
         "django_celery_results",
@@ -149,3 +152,26 @@ CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
 CELERY_TIMEZONE = "Africa/Lagos"
 CELERY_BEAT_SCHEDULER = "django_celery_beat.schedulers:DatabaseScheduler"
+
+
+JWT_SALT = config('JWT_SALT', cast=str)
+
+JWT = {
+    "ISSUER": "tutorX",
+    "ACCESS_TOKEN_LIFETIME": timedelta(hours=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "ALGORITHM": "HS256",
+    "SIGNING_KEY": f"{SECRET_KEY}:{JWT_SALT}",
+    "AUDIENCE": None,
+}
+
+# Email Credentials
+SERVER_EMAIL = config('SERVER_EMAIL', default="")
+EMAIL_USE_TLS = True
+EMAIL_HOST = config("EMAIL_HOST", default=587)
+EMAIL_PORT = 587
+EMAIL_HOST_USER = SERVER_EMAIL
+EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
+DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
+EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
+# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"

@@ -2,7 +2,7 @@ from typing import List
 from asgiref.sync import sync_to_async
 
 from django.utils import timezone
-from django.db.models import F, Sum
+from django.db.models import F, Sum, Q
 
 from ninja import Router
 from ninja.responses import codes_4xx
@@ -10,8 +10,9 @@ from ninja.responses import codes_4xx
 from payments.models import Level, SalaryCycle
 from accounts.models import Teacher
 from base.schemas import Success, Error
-from payments.schemas import LevelCreateSchema, SalaryCycleSchema, LevelSchema, PaymentSlipSchema
+from payments.schemas import LevelCreateSchema, SalaryCycleSchema, LevelSchema, PaymentSlipSchema, BulkCreateCycleSchema
 from base.messages import ResponseMessages
+from accounts.helpers import get_teacher_async, get_salary_cycle
 
 
 router = Router(tags=['Payments'])
@@ -21,11 +22,25 @@ router = Router(tags=['Payments'])
 @router.post("/salary-cycle", response={200: SalaryCycleSchema, codes_4xx: Error})
 async def create_salary_cycle(request, payload: SalaryCycleSchema):
     """ create a salary cycle"""
+    print("hello")
+    print(payload)
     if await SalaryCycle.active_objects.filter(start_date=payload.start_date, end_date=payload.end_date).aexists():
         return 400, {"error": "Salary Cycle already exists"}
-
+    
+    # if await get_salary_cycle(Q(start_date__range=[payload.start_date, payload.end_date]) |
+    #                           Q(end_date__range=[payload.start_date, payload.end_date])).aexists:
+        # return 400, {"error": "Salary Cycle already exists"}
     salary_cycle = await SalaryCycle.objects.acreate(**payload.dict())
     return salary_cycle
+
+
+@router.post("/bulk-salary-cycle", )
+def create_bulk_salary_cycle(request, payload: BulkCreateCycleSchema):
+    cycle_days = payload.cycle_days
+    average_work_hour = payload.average_work_hour
+
+    for i in range(payload.number):
+        SalaryCycle.objects.acreate(start_date=payload.start_date, end_date=set)
 
 
 @router.get("/salary-cycle/{id}", response={200: SalaryCycleSchema, codes_4xx: Error})
@@ -131,14 +146,15 @@ def generate_payment_slip(request):
 
     current_salary_cycle = SalaryCycle.active_objects.filter(
         start_date__lte=current_date, end_date__gte=current_date).first()
-    
+
     if current_date != current_salary_cycle.end_date:
         return 400, {"error": f"Payment slip cannot be generated til {current_salary_cycle.end_date}."}
 
-    qs = Teacher.active_objects.filter(attendence__clock_out__isnull=False
+    qs = Teacher.active_objects.filter(attendance__clock_out__isnull=False,
+                                       attendance__date__range=(
+                                           current_salary_cycle.start_date, current_salary_cycle.end_date)
                                        ).values("email", "account_number"
-                                        ).annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
-                                        )).filter(attendance__date__range=(current_salary_cycle.start_date, current_salary_cycle.end_date)
-                                        ).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade')))
+                                                ).annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
+                                                                                )).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade'))).values()
     # print(qs)
     return qs
