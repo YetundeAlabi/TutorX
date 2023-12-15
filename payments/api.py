@@ -1,3 +1,6 @@
+import calendar
+
+from decimal import Decimal
 from datetime import timedelta
 from typing import List
 from asgiref.sync import sync_to_async
@@ -10,10 +13,11 @@ from django.template.loader import render_to_string
 from ninja import Router
 from ninja.responses import codes_4xx
 
-from payments.models import Level, SalaryCycle
+from payments.models import Level, Settings
 from accounts.models import Teacher
 from base.schemas import Success, Error
-from payments.schemas import LevelCreateSchema, SalaryCycleSchema, LevelSchema, PaymentSlipSchema, BulkCreateCycleSchema
+from base.constants import PAY_DAY, AVERAGE_WORK_HOUR
+from payments.schemas import LevelCreateSchema, OrganisationSchema, LevelSchema, PaymentSlipSchema, SettingSchema
 from base.messages import ResponseMessages
 from payments.utils import EmailSender
 
@@ -22,71 +26,21 @@ router = Router(tags=['Payments'])
 
 
 # SALARY CYCLE
-# @router.post("/salary-cycle", response={200: SalaryCycleSchema, codes_4xx: Error})
-# async def create_salary_cycle(request, payload: SalaryCycleSchema):
-#     """ create a salary cycle"""
-#     if await SalaryCycle.active_objects.filter(start_date=payload.start_date, end_date=payload.end_date).aexists():
-#         return 400, {"error": "Salary Cycle already exists"}
-#     salary_cycle = await SalaryCycle.objects.acreate(**payload.dict())
-#     return salary_cycle
+@router.post("/settings", response={200: Success, codes_4xx: Error})
+async def create_settings(request, payload: SettingSchema):
+    """ create an organisation settings"""
+    #check if pay_day has already being set
+    if Settings.active_objects.filter(name=PAY_DAY, value=payload.pay_day).aexists():
+        return 400, {"error": ResponseMessages.DUPLICATE_PAY_DAY}
 
+    Settings.objects.filter(name=PAY_DAY).aupdate(value=payload.pay_day)
 
-@router.post("/salary-cycle/bulk-create", response={200: List[SalaryCycleSchema], codes_4xx: Error})
-async def create_bulk_salary_cycle(request, payload: BulkCreateCycleSchema):
-    if await SalaryCycle.active_objects.filter(start_date=payload.start_date).aexists():
-        return 400, {"error": "Salary Cycle already exists"}
+    #check if average work hour has been set
+    if Settings.active_objects.filter(name=PAY_DAY, value=payload.average_work_hour).aexists():
+        return 400, {"error": ResponseMessages.DUPLICATE_AVERAGE_WORK_HOUR}
 
-    start_date = payload.start_date
-    salary_cycles = []
-    for _ in range(payload.number_of_cycle):
-        end_date = start_date + timedelta(days=payload.days_in_cycle - 1)
-        salary_cycle =await SalaryCycle.objects.acreate(start_date=start_date, end_date=end_date, average_work_hour=payload.average_work_hour)
-        start_date = end_date
-        salary_cycles.append(salary_cycle)
-    # print(salary_cycles)
-    return salary_cycles
-
-
-@router.get("/salary-cycle/{id}", response={200: SalaryCycleSchema, codes_4xx: Error})
-async def get_salary_cycle(request, id: int):
-    """ get a single salary-cycle"""
-    salary_cycle = await SalaryCycle.active_objects.filter(pk=id).afirst()
-    if not salary_cycle:
-        return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
-    return salary_cycle
-
-
-@router.get("/salary-cycle", response={200: List[SalaryCycleSchema], codes_4xx: Error})
-async def get_all_salary_cycle(request):
-    """ get all salary cycle. turn to list to get all object asynchoronously"""
-    return await sync_to_async(list)(SalaryCycle.active_objects.all())
-
-
-@router.patch("/salary-cycle/{id}/update", response={200: SalaryCycleSchema, codes_4xx: Error})
-async def update_salary_cycle(request, id: int, data: SalaryCycleSchema):
-    """ update salary cycle"""
-    salary_cycle = await SalaryCycle.active_objects.filter(pk=id).afirst()
-    if not salary_cycle:
-        return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
-    payload = data.dict(exclude_unset=True)
-
-    field_names = []
-    for field_name, value in payload.items():
-        setattr(salary_cycle, field_name, value)
-        field_names.append(field_name)
-
-    await salary_cycle.asave(update_fields=field_names)
-    return salary_cycle
-
-
-@router.delete("/salary-cycle/{id}", response={200: Success, codes_4xx: Error})
-async def delete_salary_cycle(request, id: int):
-    salary_cycle = await SalaryCycle.active_objects.filter(pk=id).afirst()
-    if not salary_cycle:
-        return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
-
-    await salary_cycle.adelete()
-    return 200, {"message": "Salary cycle deleted successfully"}
+    Settings.objects.filter(name=AVERAGE_WORK_HOUR).aupdate(value=payload.average_work_hour)
+    return {"message": "Settings configured successfully"}
 
 
 # LEVEL
@@ -144,20 +98,25 @@ async def delete_level(request, id: int):
 
 
 @router.get("/salary-slip", response={200: List[PaymentSlipSchema], 400: Error})
-def generate_payment_slip(request):
-    """ get total work hour of the current salary cycle of teachers """
-    current_date = timezone.now().date()
-
-    current_salary_cycle = SalaryCycle.active_objects.filter(
-        start_date__lte=current_date, end_date__gte=current_date).first()
-
-    if current_date != current_salary_cycle.end_date:
-        return 400, {"error": f"Payment slip cannot be generated til {current_salary_cycle.end_date}."}
+def generate_payment_slip(request, name: str):
+    """ get total work hour of teachers at pay day"""
+    pay_day = Settings.active_objects.only("value").filter(name=PAY_DAY).afirst()
+    current_datetime = timezone.now()
+    
+    if current_datetime.day != pay_day.value:
+        return 400, {"error": f"Payment slip cannot be generated til {pay_day.value}th of the current month."}
     
     # get teacher total work hour and total pay within a salary cycle if there attendance clock-out is not null
+    #get teacher total salary pay
+    #get total_work_hour for the month
+    current_year = current_datetime.year
+    current_month = current_datetime.month
+    _, days_in_current_month = calendar.monthrange(current_year, current_month)
+
+    settings = Settings.active_objects.filter(name=AVERAGE_WORK_HOUR).annotate(total_avg_work_hour=F('value') * Decimal(days_in_current_month))
+    
     qs = Teacher.active_objects.filter(attendance__clock_out__isnull=False,
-                                       attendance__date__range=(
-                                           current_salary_cycle.start_date, current_salary_cycle.end_date)
+                                       attendance__date__month=current_month
                                        ).values("email", "account_number"
                                                 ).annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'),
                                                                                 )).annotate(total_pay=(F('total_work_hours') * F('level__pay_grade')))
@@ -166,7 +125,7 @@ def generate_payment_slip(request):
 
 @router.get("/teacher-slip", response={200:Success})
 def send_teacher_pay_slip(request):
-    #send teacher pay slip if today is salary cycle end date
+    #send teacher pay slip if today is pay day
     current_date = timezone.now().date()
     current_salary_cycle = SalaryCycle.active_objects.filter(
         start_date__lte=current_date, end_date__gte=current_date).first()

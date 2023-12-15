@@ -4,11 +4,9 @@ from django.db.models import Q
 from base.models import BaseModel
 # Create your models here.
 
-class SalaryCycle(BaseModel):
-    start_date = models.DateField()
-    end_date = models.DateField()
-    average_work_hour = models.PositiveIntegerField()
-
+class Settings(BaseModel):
+    name = models.Charfied(max_length=150, unique=True)
+    value = models.PositiveIntegerField(null=True, Blank=True)
 
 
 class Level(BaseModel):

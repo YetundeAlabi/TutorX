@@ -35,14 +35,14 @@ class Attendance(BaseModel):
     clock_in= models.DateTimeField()
     clock_out = models.DateTimeField(null=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="attendance")
-    present = models.BooleanField(default=True) 
+    # present = models.BooleanField(default=True) 
 
     def __str__(self):
         return self.teacher.email
     
 
 class PromotionDemotion(BaseModel):
-    salary_cycle = models.ForeignKey(SalaryCycle, on_delete=models.CASCADE)
+    date = models.DateField()
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     is_promoted = models.BooleanField(default=False)
     is_demoted = models.BooleanField(default=False)
