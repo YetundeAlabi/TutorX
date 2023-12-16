@@ -136,6 +136,17 @@ def generate_payment_slip(request, name: str):
                                        ).values("email", "account_number"
                                        ).annotate(total_work_hours=Sum(F('attendance__clock_out__hour') - F('attendance__clock_in__hour'))
                                        ).annotate(total_regular_work_hours=Sum('attendance', distinct=True) * regular_work_hour
+                                        .annotate(
+                                           overtime_hours=ExpressionWrapper(
+                                               Case(
+                                                   When(total_work_hours__gte=F('total_regular_work_hours'),
+                                                        then=F('total_work_hours') - F('total_regular_work_hours')),
+                                                   default=Value(0),
+                                                   output_field=fields.DurationField()
+                                               ),
+                                               output_field=fields.DurationField()
+                                           )
+                                       )
                                         ).annotate(overtime_hours=Case(
                                                     When(total_work_hours__gt=total_regular_work_hours, then=F('total_work_hours') - weekly_work_hours),
                                                     default=Value(0),
