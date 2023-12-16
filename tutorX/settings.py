@@ -170,3 +170,6 @@ EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
 # EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+
+
+AVERAGE_WORK_HOUR = 8

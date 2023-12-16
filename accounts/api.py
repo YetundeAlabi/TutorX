@@ -191,6 +191,7 @@ async def promote_teacher(request, payload: PromotionSchema):
 
     teacher.level = level
     await teacher.asave(update_fields=["level"])
+    #send an email to notify teacher of promotion and pay grade
     return {"message": f"{teacher.full_name} has been promoted to {level.name}"}
 
 
@@ -214,5 +215,5 @@ async def demoted_teacher(request, payload: DemotionSchema):
 
     teacher.level = level
     teacher.save(update_fields=["level"])
-
+    # send an email to notify teacher of demotion and pay grade
     return {"message": f"{teacher.full_name} has been demoted to {level.name}"}
