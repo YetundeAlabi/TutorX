@@ -19,7 +19,7 @@ from accounts.schemas import (
     DemotionSchema
 )
 from accounts.auth import JWTAuth
-from payments.models import Level, SalaryCycle
+from payments.models import Level
 from base.schemas import Success, Error
 from base.messages import ResponseMessages
 
@@ -181,13 +181,13 @@ async def promote_teacher(request, payload: PromotionSchema):
     if not level:
         return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
 
-    if not await SalaryCycle.active_objects.filter(id=payload.salary_cycle_id).afirst():
-        return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
+    # if not await SalaryCycle.active_objects.filter(id=payload.salary_cycle_id).afirst():
+    #     return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
 
     if payload.level_id == level.id:
         return 400, {"error": ResponseMessages.EXISTING_LEVEL}
 
-    await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_promoted=payload.is_promoted, salary_cycle_id=payload.salary_cycle_id)
+    # await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_promoted=payload.is_promoted, salary_cycle_id=payload.salary_cycle_id)
 
     teacher.level = level
     await teacher.asave(update_fields=["level"])
@@ -205,13 +205,13 @@ async def demoted_teacher(request, payload: DemotionSchema):
     if not level:
         return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
 
-    if not await SalaryCycle.active_objects.filter(id=payload.salary_cycle_id).afirst():
-        return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
+    # if not await SalaryCycle.active_objects.filter(id=payload.salary_cycle_id).afirst():
+    #     return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
 
     if payload.level_id == level.id:
         return 400, {"error": ResponseMessages.EXISTING_LEVEL}
 
-    await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_demoted=payload.is_demoted, salary_cycle_id=payload.salary_cycle_id)
+    # await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_demoted=payload.is_demoted, salary_cycle_id=payload.salary_cycle_id)
 
     teacher.level = level
     teacher.save(update_fields=["level"])

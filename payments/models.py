@@ -6,9 +6,9 @@ from base.models import BaseModel
 # Create your models here.
 
 class Organisation(BaseModel):
-    name = models.Charfied(max_length=150, unique=True)
+    name = models.CharField(max_length=150, unique=True)
     work_hour_per_day = models.PositiveIntegerField()
-    working_days = models.PositiveIntegerField()
+    overtime_rate = models.DecimalField(decimal_places=2, max_digits=20)
 
     def save(self, *args, **kwargs):
         # Ensure only one instance exists
@@ -23,7 +23,7 @@ class Organisation(BaseModel):
 class Level(BaseModel):
     name = models.CharField(max_length=50)
     pay_grade = models.DecimalField(decimal_places=2, max_digits=20)
-    # order = models.AutoField()
+    order = models.PositiveIntegerField()
 
 
     def __str__(self):

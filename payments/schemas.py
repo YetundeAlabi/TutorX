@@ -20,6 +20,9 @@ class LevelSchema(Schema):
 class PaymentSlipSchema(Schema):
     email: str
     account_number: str
+    total_regular_work_hours: int
     total_work_hours: int
+    overtime_hours: int
+    over_time_pay: float
     total_pay: float
     

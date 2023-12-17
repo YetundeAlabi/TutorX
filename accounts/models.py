@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth import get_user_model
 
 from base.models import BaseModel
-from payments.models import Level, SalaryCycle
+from payments.models import Level
 # Create your models here.
 
 User = get_user_model()
