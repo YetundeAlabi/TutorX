@@ -5,8 +5,7 @@ from django.db.models import F, Sum, ExpressionWrapper, fields, Value, Case, Whe
 from django.template.loader import render_to_string
 
 from tutorX.celery import app
-from payments.models import Organisation
-from accounts.models import Teacher
+from accounts.models import Teacher, Organisation
 from payments.utils import EmailSender
 
 @app.task

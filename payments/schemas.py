@@ -1,5 +1,6 @@
+from pydantic import validator
+
 from ninja import Schema
-from decimal import Decimal
 
 
 class LevelCreateSchema(Schema):
@@ -23,3 +24,7 @@ class PaymentSlipSchema(Schema):
     over_time_pay: float
     total_pay: float
     
+    @validator('total_work_hours', 'work_hours_pay', 'over_time_pay', 'total_pay', pre=True, always=True)
+    def round_float_values(cls, value):
+        # Round the float value to 2 decimal places
+        return round(value, 2)
