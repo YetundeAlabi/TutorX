@@ -8,12 +8,13 @@ from tutorX.celery import app
 from accounts.models import Teacher, Organisation
 from payments.utils import EmailSender
 
+
 @app.task
 def send_teacher_pay_slip():
-        # send teacher pay slip if today is pay day
+    # send teacher pay slip if today is pay day
     current_datetime = timezone.now()
     if current_datetime.day == 1:
-        
+
         previous_datetime = current_datetime - relativedelta(months=1)
 
         previous_month = previous_datetime.month

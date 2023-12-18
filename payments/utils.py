@@ -9,7 +9,6 @@ class EmailSender:
         msg = EmailMultiAlternatives(
             subject, mail_content, from_email, [recipient])
         msg.attach_alternative(mail_content, "text/html")
-        print("sending")
         msg.send()
 
     @classmethod

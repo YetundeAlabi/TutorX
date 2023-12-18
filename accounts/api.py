@@ -148,7 +148,7 @@ async def delete_teacher(request, id: int):
     if not teacher:
         return 400, {"error": ResponseMessages.TEACHER_NOT_FOUND}
 
-    await teacher.adelete()
+    await teacher.asoft_delete()
     return 200, {"message": "Teacher deleted successfully"}
 
 
@@ -207,7 +207,6 @@ async def register_attendance(request, payload: AttendenceSchema):
 
 # promotion and demotion
 
-
 @router.post('/promotion', response={200: Success, codes_4xx: Error}, auth=None)
 async def promote_teacher(request, payload: PromotionSchema):
     """ promote teacher"""
@@ -239,7 +238,7 @@ async def promote_teacher(request, payload: PromotionSchema):
 
 
 @router.post('/demotion', response={200: Success, codes_4xx: Error})
-async def demoted_teacher(request, payload: DemotionSchema):
+async def demote_teacher(request, payload: DemotionSchema):
     teacher = await Teacher.active_objects.filter(email=payload.email).afirst()
     if not teacher:
         return 400, {"error": ResponseMessages.TEACHER_NOT_FOUND}

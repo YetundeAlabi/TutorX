@@ -5,7 +5,6 @@ from dateutil.relativedelta import relativedelta
 from django.utils import timezone
 from django.db.models import F, Sum, ExpressionWrapper, fields, Value, Case, When, Count
 from django.db.models.functions import Extract
-from django.template.loader import render_to_string
 
 from ninja import Router
 from ninja.responses import codes_4xx
@@ -15,17 +14,21 @@ from accounts.models import Teacher, Organisation
 from base.schemas import Success, Error
 from payments.schemas import LevelCreateSchema, LevelSchema, PaymentSlipSchema
 from base.messages import ResponseMessages
-from payments.utils import EmailSender
 
 
 router = Router(tags=['Payments'])
-
 
 # LEVEL
 @router.post("/level/create", response={200: LevelSchema})
 async def create_level(request, payload: LevelCreateSchema):
     """ create a level"""
-    level = await Level.objects.acreate(**payload.dict())
+    if payload.parent_level:
+        parent_level = Level.active_objects.filter(name__iexact= parent_level).afirst()
+
+    if not parent_level:
+        return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
+    
+    level = await Level.objects.acreate(name=payload.name, pay_grade=payload.pay_grade, parent_level=parent_level)
     return level
 
 
@@ -71,7 +74,7 @@ async def delete_level(request, id: int):
     if await level.teachers.acount() != 0:
         return 400, {"error": "Level cannot be deleted. Teachers are associated with it"}
 
-    await level.adelete()
+    await level.asoft_delete()
     return 200, {"message": "Level deleted successfully"}
 
 
@@ -142,75 +145,75 @@ def generate_payment_slip(request):
         )
     )
 
-    print(qs)
+    # print(qs)
     return qs
 
 
-@router.get("/teacher-slip", response={200: Success}, auth=None)
-def send_teacher_pay_slip(request):
-    # send teacher pay slip if today is pay day
-    current_datetime = timezone.now()
+# @router.get("/teacher-slip", response={200: Success})
+# def send_teacher_pay_slip(request):
+#     # send teacher pay slip if today is pay day
+#     current_datetime = timezone.now()
 
-    previous_datetime = current_datetime - relativedelta(months=1)
+#     previous_datetime = current_datetime - relativedelta(months=1)
 
-    previous_month = previous_datetime.month
+#     previous_month = previous_datetime.month
 
-    org = Organisation.objects.only(
-        'work_hour_per_day', 'overtime_percent').filter().first()
+#     org = Organisation.objects.only(
+#         'work_hour_per_day', 'overtime_percent').filter().first()
 
-    daily_work_hours = org.work_hour_per_day
-    overtime_percent = org.overtime_percent
+#     daily_work_hours = org.work_hour_per_day
+#     overtime_percent = org.overtime_percent
 
-    # generate payslip
-    qs = Teacher.active_objects.filter(
-        attendance__date__month=previous_month
-    ).values(
-        "email", "first_name", "level__pay_grade"
-    ).annotate(
-        total_regular_work_hours=ExpressionWrapper(
-            Count('attendance', distinct=True) * daily_work_hours,
-            output_field=fields.DurationField()
-        )
-    ).annotate(
-        total_work_duration=Sum(
-            F('attendance__clock_out') - F('attendance__clock_in')),
-        total_work_hours=ExpressionWrapper(
-            Extract('total_work_duration', 'hour') +
-            Extract('total_work_duration', 'minute') / 60,
-            output_field=fields.FloatField()
-        )
-    ).annotate(
-        overtime_hours=ExpressionWrapper(
-            Case(
-                When(total_work_hours__gte=F('total_regular_work_hours'),
-                     then=F('total_work_hours') - F('total_regular_work_hours')),
-                default=Value(0),
-                output_field=fields.DurationField()
-            ),
-            output_field=fields.DurationField()
-        ),
-        overtime_rate=ExpressionWrapper(F('level__pay_grade') * (overtime_percent / 100) + (
-            F('level__pay_grade')), output_field=fields.FloatField())
-    ).annotate(
-        work_hours_pay=ExpressionWrapper(
-            (F('total_work_hours') - F('overtime_hours')) * F('level__pay_grade'),
-            output_field=fields.FloatField()
-        )
-    ).annotate(
-        over_time_pay=ExpressionWrapper(
-            F('overtime_hours') * F('overtime_rate'), output_field=fields.FloatField())
-    ).annotate(
-        total_pay=ExpressionWrapper(
-            F('work_hours_pay') + F('over_time_pay'),
-            output_field=fields.FloatField()
-        )
-    )
-    for teacher in qs:
-        mail_body = render_to_string(template_name="emails/payment/teacher_pay_slip.html",
-                                     context={"teacher_name": teacher["first_name"], "total_work_hours": round(teacher["total_work_hours"], 2),
-                                              "total_regular_work_hours": teacher["total_regular_work_hours"], "overtime_hours": round(teacher["overtime_hours"], 2),
-                                              "pay_per_hour": teacher["level__pay_grade"], "work_hours_pay": teacher["work_hours_pay"],
-                                              "overtime_pay": teacher["over_time_pay"], "total_pay": teacher["total_pay"]})
+#     # generate payslip
+#     qs = Teacher.active_objects.filter(
+#         attendance__date__month=previous_month
+#     ).values(
+#         "email", "first_name", "level__pay_grade"
+#     ).annotate(
+#         total_regular_work_hours=ExpressionWrapper(
+#             Count('attendance', distinct=True) * daily_work_hours,
+#             output_field=fields.DurationField()
+#         )
+#     ).annotate(
+#         total_work_duration=Sum(
+#             F('attendance__clock_out') - F('attendance__clock_in')),
+#         total_work_hours=ExpressionWrapper(
+#             Extract('total_work_duration', 'hour') +
+#             Extract('total_work_duration', 'minute') / 60,
+#             output_field=fields.FloatField()
+#         )
+#     ).annotate(
+#         overtime_hours=ExpressionWrapper(
+#             Case(
+#                 When(total_work_hours__gte=F('total_regular_work_hours'),
+#                      then=F('total_work_hours') - F('total_regular_work_hours')),
+#                 default=Value(0),
+#                 output_field=fields.DurationField()
+#             ),
+#             output_field=fields.DurationField()
+#         ),
+#         overtime_rate=ExpressionWrapper(F('level__pay_grade') * (overtime_percent / 100) + (
+#             F('level__pay_grade')), output_field=fields.FloatField())
+#     ).annotate(
+#         work_hours_pay=ExpressionWrapper(
+#             (F('total_work_hours') - F('overtime_hours')) * F('level__pay_grade'),
+#             output_field=fields.FloatField()
+#         )
+#     ).annotate(
+#         over_time_pay=ExpressionWrapper(
+#             F('overtime_hours') * F('overtime_rate'), output_field=fields.FloatField())
+#     ).annotate(
+#         total_pay=ExpressionWrapper(
+#             F('work_hours_pay') + F('over_time_pay'),
+#             output_field=fields.FloatField()
+#         )
+#     )
+#     for teacher in qs:
+#         mail_body = render_to_string(template_name="emails/payment/teacher_pay_slip.html",
+#                                      context={"teacher_name": teacher["first_name"], "total_work_hours": round(teacher["total_work_hours"], 2),
+#                                               "total_regular_work_hours": teacher["total_regular_work_hours"], "overtime_hours": round(teacher["overtime_hours"], 2),
+#                                               "pay_per_hour": teacher["level__pay_grade"], "work_hours_pay": teacher["work_hours_pay"],
+#                                               "overtime_pay": teacher["over_time_pay"], "total_pay": teacher["total_pay"]})
 
-        EmailSender.teacher_payment_mail(teacher["email"], mail_body)
-    return {"message": "Sending Email"}
+#         EmailSender.teacher_payment_mail(teacher["email"], mail_body)
+#     return {"message": "Sending Email"}
