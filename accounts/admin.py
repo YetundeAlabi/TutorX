@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Admin, Attendance, Teacher
+from .models import Admin, Attendance, Teacher, Organisation
 # Register your models here.
 
 
@@ -15,3 +15,4 @@ class TeacherAdmin(admin.ModelAdmin):
 
 
 admin.site.register(Admin)
+admin.site.register(Organisation)

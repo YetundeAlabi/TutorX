@@ -1,10 +1,6 @@
 from ninja import Schema
+from decimal import Decimal
 
-
-class OrganisationSchema(Schema):
-    name: str
-    work_hour_per_day : int
-    
 
 class LevelCreateSchema(Schema):
     name: str
@@ -21,8 +17,9 @@ class PaymentSlipSchema(Schema):
     email: str
     account_number: str
     total_regular_work_hours: int
-    total_work_hours: int
+    total_work_hours: float
     overtime_hours: int
+    work_hours_pay: float
     over_time_pay: float
     total_pay: float
     

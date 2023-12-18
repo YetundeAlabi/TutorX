@@ -8,20 +8,23 @@ from ninja.responses import codes_4xx
 
 from django.contrib.auth import get_user_model
 from django.utils import timezone
+from django.template.loader import render_to_string
 
-from accounts.models import PromotionDemotion, Teacher, Attendance
+from accounts.models import PromotionDemotion, Teacher, Attendance, Organisation
 from accounts.schemas import (
     TeacherSchema,
     AttendenceSchema,
     PromotionSchema,
     LoginSchema,
     TokenSchema,
-    DemotionSchema
+    DemotionSchema,
+    OrganisationSchema
 )
 from accounts.auth import JWTAuth
 from payments.models import Level
 from base.schemas import Success, Error
 from base.messages import ResponseMessages
+from payments.utils import EmailSender
 
 User = get_user_model()
 router = Router(tags=['Account'])
@@ -58,7 +61,40 @@ def refresh_token(request, token: str):
     return {"access": access}
 
 
+# organisation settings needed
+@router.post("/organisation", response={200: OrganisationSchema, codes_4xx: Error}, auth=None)
+async def create_org(request, payload: OrganisationSchema):
+    """ create organisation and weekly_work_hours"""
+    org = await Organisation.objects.acreate(**payload.dict())
+    return org
+
+
+@router.get("/organisation/{id}", response={200: OrganisationSchema, codes_4xx: Error})
+async def org_detail(request, id: int, payload: OrganisationSchema):
+    """ create organisation and weekly_work_hours"""
+    org = await Organisation.objects.filter(pk=id).afirst()
+    return org
+
+
+@router.patch("/organisation/{id}", response={200: Success, codes_4xx: Error})
+async def update_org(request, id: int, payload: OrganisationSchema):
+    """ create organisation and weekly_work_hours"""
+    org = await Organisation.objects.filter(pk=id).afirst()
+
+    data = payload.dict(exclude_unset=True)
+
+    field_names = []
+    for field_name, value in data.items():
+        setattr(org, field_name, value)
+        field_names.append(field_name)
+
+    await org.asave(update_fields=field_names)
+
+    return {"message": "Organisation settings updated successfully"}
+
 # onboard teachers
+
+
 @router.post("/teachers/create", response={200: Success, codes_4xx: Error})
 async def onboard_teachers(request, payload: TeacherSchema):
     """ Teachers onboarding by an admin"""
@@ -116,29 +152,29 @@ async def delete_teacher(request, id: int):
     return 200, {"message": "Teacher deleted successfully"}
 
 
-@router.post("/import/teachers", response={200: Success, codes_4xx: Error})
+@router.post("/import/teachers", response={200: Success, codes_4xx: Error}, auth=None)
 async def bulk_upload_teachers(request, file: UploadedFile = File(...)):
     if not file.name.endswith('csv'):
         return 400, {"error": ResponseMessages.INVALID_FILE_FORMAT}
-    reader = csv.reader(file)
+    decoded_file = file.read().decode('utf-8').splitlines()
+    reader = csv.reader(decoded_file)
     headers = next(reader, None)
     expected_headers = ["first_name", "last_name", "email",
-                        "level_id", "account_number", "bank", "account_name"]
-    print(headers)
+                        "level", "account_number", "bank", "account_name"]
     if headers != expected_headers:
-        return 400, {"error": "Invalid CSV file. Headers do not match. Expected headers: {}'.format(', '.join(expected_headers)"}
+        return 400, {"error": f"Invalid CSV file. Headers do not match. Expected headers: {', '.join(expected_headers)}"}
 
-    errors = []
+    # errors = []
     for row in reader:
-        # check if level_id exists
+        # check if level_name exists
         try:
-            level = await Level.active_objects.get(id=row[3])
+            level = await Level.active_objects.aget(name__iexact=row[3])
         except Level.DoesNotExist:
-            # append error
-            errors.append(f'Level with {row[3]} does not exist')
-            continue
-        teachers, _ = await Teacher.active_objects.aget_or_create(first_name=row[0], last_name=row[1], email=row[2], level=level,
+            return 400, {'error': f'Level with {row[3]} does not exist'}
+        
+        await Teacher.active_objects.aget_or_create(first_name=row[0], last_name=row[1], email=row[2], level=level,
                                                                   account_number=row[4], bank=row[5], account_name=[6])
+
         return 200, {"message": "Teacher created successfully"}
 
 
@@ -171,28 +207,35 @@ async def register_attendance(request, payload: AttendenceSchema):
 
 # promotion and demotion
 
+
 @router.post('/promotion', response={200: Success, codes_4xx: Error}, auth=None)
 async def promote_teacher(request, payload: PromotionSchema):
-    teacher = await Teacher.active_objects.filter(email=payload.email).afirst()
+    """ promote teacher"""
+    teacher = await Teacher.active_objects.filter(email=payload.email).select_related("level").afirst()
     if not teacher:
         return 400, {"error": ResponseMessages.TEACHER_NOT_FOUND}
+
+    # new_level = await Level.active_objects.filter(level__gt=level).afirst()
+#     # if not level:
+#     #     return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
 
     level = await Level.active_objects.filter(id=payload.level_id).afirst()
     if not level:
         return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
 
-    # if not await SalaryCycle.active_objects.filter(id=payload.salary_cycle_id).afirst():
-    #     return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
-
-    if payload.level_id == level.id:
+    if payload.level_id == teacher.level.id:
         return 400, {"error": ResponseMessages.EXISTING_LEVEL}
 
-    # await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_promoted=payload.is_promoted, salary_cycle_id=payload.salary_cycle_id)
+    await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_promoted=payload.is_promoted)
 
     teacher.level = level
     await teacher.asave(update_fields=["level"])
-    #send an email to notify teacher of promotion and pay grade
-    return {"message": f"{teacher.full_name} has been promoted to {level.name}"}
+    # send an email to notify teacher of promotion and pay grade
+    mail_body = render_to_string(
+        template_name="emails/promotion/teacher_promotion.html",
+        context={"teacher": teacher})
+    EmailSender.promotion_mail(recipient=teacher.email, mail_body=mail_body)
+    return {"message": f"{teacher.full_name} has been promoted to {level.name} level"}
 
 
 @router.post('/demotion', response={200: Success, codes_4xx: Error})
@@ -205,15 +248,17 @@ async def demoted_teacher(request, payload: DemotionSchema):
     if not level:
         return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
 
-    # if not await SalaryCycle.active_objects.filter(id=payload.salary_cycle_id).afirst():
-    #     return 400, {"error": ResponseMessages.SALARY_CYCLE_NOT_FOUND}
-
     if payload.level_id == level.id:
         return 400, {"error": ResponseMessages.EXISTING_LEVEL}
 
-    # await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_demoted=payload.is_demoted, salary_cycle_id=payload.salary_cycle_id)
+    await PromotionDemotion.objects.acreate(teacher=teacher, level=level, is_demoted=payload.is_promoted,
+                                             demotion_reason=payload.demotion_reason)
 
     teacher.level = level
     teacher.save(update_fields=["level"])
     # send an email to notify teacher of demotion and pay grade
+    mail_body = render_to_string(
+        template_name="emails/demotion/teacher_demotion.html",
+        context={"teacher": teacher})
+    EmailSender.promotion_mail(recipient=teacher.email, mail_body=mail_body)
     return {"message": f"{teacher.full_name} has been demoted to {level.name}"}

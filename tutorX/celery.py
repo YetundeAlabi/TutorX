@@ -15,5 +15,5 @@ app.autodiscover_tasks()
 app.conf.beat_schedule = {
     "send_payment_slip_for_teacher_on_salary_cycle_end_date": {
         "task": 'payments.tasks.send_teacher_pay_slip',
-        'schedule': crontab(minute=0, hour=11),
+        'schedule': crontab(hour=9, minute=0, day_of_month=1),
     }}
