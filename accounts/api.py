@@ -92,9 +92,8 @@ async def update_org(request, id: int, payload: OrganisationSchema):
 
     return {"message": "Organisation settings updated successfully"}
 
+
 # onboard teachers
-
-
 @router.post("/teachers/create", response={200: Success, codes_4xx: Error})
 async def onboard_teachers(request, payload: TeacherSchema):
     """ Teachers onboarding by an admin"""
@@ -213,10 +212,6 @@ async def promote_teacher(request, payload: PromotionSchema):
     teacher = await Teacher.active_objects.filter(email=payload.email).select_related("level").afirst()
     if not teacher:
         return 400, {"error": ResponseMessages.TEACHER_NOT_FOUND}
-
-    # new_level = await Level.active_objects.filter(level__gt=level).afirst()
-#     # if not level:
-#     #     return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
 
     level = await Level.active_objects.filter(id=payload.level_id).afirst()
     if not level:

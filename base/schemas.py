@@ -1,5 +1,5 @@
 from ninja import Schema
-from typing import Any, Union
+from typing import Union
 
 
 class Success(Schema):

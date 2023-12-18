@@ -1,7 +1,6 @@
 from django.contrib import admin
 
 from .models import Admin, Attendance, Teacher, Organisation
-# Register your models here.
 
 
 @admin.register(Attendance)

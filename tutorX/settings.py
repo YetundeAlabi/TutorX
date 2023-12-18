@@ -136,13 +136,7 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # celery
 CELERY_BROKER_URL = config("CELERY_BROKER", default="redis://127.0.0.1:6379")
-# CELERY_RESULT_BACKEND = config("CELERY_BACKEND", default="redis://redis:6379")
 CELERY_RESULT_BACKEND = "django-db"
-# if CELERY_RESULT_BACKEND == "django-db":
-#     INSTALLED_APPS += [
-#         "django_celery_results",
-#     ]
-
 CELERY_ACCEPT_CONTENT = ["application/json"]
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TASK_SERIALIZER = "json"
@@ -170,7 +164,7 @@ EMAIL_HOST_USER = SERVER_EMAIL
 EMAIL_HOST_PASSWORD = config("EMAIL_HOST_PASSWORD")
 DEFAULT_FROM_EMAIL = config("DEFAULT_FROM_EMAIL")
 EMAIL_BACKEND = 'djcelery_email.backends.CeleryEmailBackend'
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 
 
-AVERAGE_WORK_HOUR = 8
+
+# AVERAGE_WORK_HOUR = 8
