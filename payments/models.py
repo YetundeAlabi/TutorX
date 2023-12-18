@@ -1,5 +1,4 @@
 from django.db import models
-from django.db.models import Q
 
 from base.models import BaseModel
 # Create your models here.

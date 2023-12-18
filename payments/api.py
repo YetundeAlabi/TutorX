@@ -22,12 +22,6 @@ router = Router(tags=['Payments'])
 @router.post("/level/create", response={200: LevelSchema})
 async def create_level(request, payload: LevelCreateSchema):
     """ create a level"""
-    if payload.parent_level:
-        parent_level = Level.active_objects.filter(name__iexact= parent_level).afirst()
-
-    if not parent_level:
-        return 400, {"error": ResponseMessages.LEVEL_NOT_FOUND}
-    
     level = await Level.objects.acreate(name=payload.name, pay_grade=payload.pay_grade, parent_level=parent_level)
     return level
 
@@ -81,11 +75,13 @@ async def delete_level(request, id: int):
 @router.get("/salary-slip", response={200: List[PaymentSlipSchema], 400: Error})
 def generate_payment_slip(request):
     """
-      generate slip for teachers at the last day of the month at past 4pm
+      generate payment slip of previous month for teachers at the first day of each month
       total work hours,
       total regular work hours (days present * daily work hours)
       overtime hours,
-      work_hours_pay
+      work_hours_pay,
+      overtime pay
+      total pay
 
     """
     current_datetime = timezone.now()
@@ -107,7 +103,7 @@ def generate_payment_slip(request):
         "email", "account_number"
     ).annotate(
         total_regular_work_hours=ExpressionWrapper(
-            Count('attendance', distinct=True) * daily_work_hours,
+            Count('attendance', distinct=True) * daily_work_hours,  #get the count of each teacher total attendance * daily work hours
             output_field=fields.DurationField()
         )
     ).annotate(

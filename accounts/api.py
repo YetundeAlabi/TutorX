@@ -32,6 +32,7 @@ router = Router(tags=['Account'])
 
 @router.post("/login", response={200: TokenSchema, codes_4xx: Error}, auth=None)
 async def login(request, payload: LoginSchema):
+    """ login user """
     user = await User.objects.filter(username=payload.email).afirst()
     if not user:
         return 400, {"error": ResponseMessages.WRONG_CREDENTIALS_MSG}
@@ -62,23 +63,25 @@ def refresh_token(request, token: str):
 
 
 # organisation settings needed
-@router.post("/organisation", response={200: OrganisationSchema, codes_4xx: Error}, auth=None)
+@router.post("/organisation", response={200: OrganisationSchema, codes_4xx: Error})
 async def create_org(request, payload: OrganisationSchema):
-    """ create organisation and weekly_work_hours"""
+    """ create organisation name, work_hour_per_day, overtime_percent for teachers
+        only one instance of this object exists
+    """
     org = await Organisation.objects.acreate(**payload.dict())
     return org
 
 
 @router.get("/organisation/{id}", response={200: OrganisationSchema, codes_4xx: Error})
 async def org_detail(request, id: int, payload: OrganisationSchema):
-    """ create organisation and weekly_work_hours"""
+    """ get organisation details"""
     org = await Organisation.objects.filter(pk=id).afirst()
     return org
 
 
 @router.patch("/organisation/{id}", response={200: Success, codes_4xx: Error})
 async def update_org(request, id: int, payload: OrganisationSchema):
-    """ create organisation and weekly_work_hours"""
+    """ update organisation"""
     org = await Organisation.objects.filter(pk=id).afirst()
 
     data = payload.dict(exclude_unset=True)
@@ -151,8 +154,9 @@ async def delete_teacher(request, id: int):
     return 200, {"message": "Teacher deleted successfully"}
 
 
-@router.post("/import/teachers", response={200: Success, codes_4xx: Error}, auth=None)
+@router.post("/import/teachers", response={200: Success, codes_4xx: Error})
 async def bulk_upload_teachers(request, file: UploadedFile = File(...)):
+    """ bulk upload teachers with a csv file"""
     if not file.name.endswith('csv'):
         return 400, {"error": ResponseMessages.INVALID_FILE_FORMAT}
     decoded_file = file.read().decode('utf-8').splitlines()
