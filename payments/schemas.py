@@ -1,24 +1,6 @@
-from datetime import date
-from decimal import Decimal
-from pydantic import Field 
-from typing import ClassVar
+from pydantic import validator
 
-from ninja import Schema, ModelSchema
-
-from payments.models import SalaryCycle, Level
-
-
-class BulkCreateCycleSchema(Schema):
-    days_in_cycle : int
-    average_work_hour: int
-    number_of_cycle : int
-    start_date : date
-
-
-class SalaryCycleSchema(ModelSchema):
-    class Config:
-        model = SalaryCycle
-        model_fields = ["id", "start_date", "end_date", "average_work_hour"]
+from ninja import Schema
 
 
 class LevelCreateSchema(Schema):
@@ -35,7 +17,14 @@ class LevelSchema(Schema):
 class PaymentSlipSchema(Schema):
     email: str
     account_number: str
-    total_work_hours: int
+    total_regular_work_hours: int
+    total_work_hours: float
+    overtime_hours: int
+    work_hours_pay: float
+    over_time_pay: float
     total_pay: float
-    # start_date: date
-    # end_date: date
+    
+    @validator('total_work_hours', 'work_hours_pay', 'over_time_pay', 'total_pay', pre=True, always=True)
+    def round_float_values(cls, value):
+        # Round the float value to 2 decimal places
+        return round(value, 2)

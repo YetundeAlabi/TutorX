@@ -17,3 +17,17 @@ class EmailSender:
         from_email = settings.EMAIL_HOST_USER
         return cls._send_email(subject=subject, mail_content=mail_body, recipient=recipient,
                                from_email=from_email)
+
+    @classmethod
+    def promotion_mail(cls, recipient, mail_body):
+        subject = "Congratulations on your Promotion"
+        from_email = settings.EMAIL_HOST_USER
+        return cls._send_email(subject=subject, mail_content=mail_body, recipient=recipient,
+                               from_email=from_email)
+
+    @classmethod
+    def demotion_mail(cls, recipient, mail_body):
+        subject = "Notice of Demotion"
+        from_email = settings.REMAIL_HOST_USER
+        return cls._send_email(subject=subject, mail_content=mail_body, recipient=recipient,
+                               from_email=from_email)

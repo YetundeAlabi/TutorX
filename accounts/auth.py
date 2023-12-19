@@ -22,11 +22,6 @@ from base.constants import (
 User = get_user_model()
 
 
-# class AuthBearer(HttpBearer):
-#     def authenticate(self, request, key):
-#         return TokenAuthentication(request, key).authenticate()
-
-
 async def async_auth_bearer(request):
     token = get_auth_header(request)
     return await TokenAuthentication(request, token).authenticate()
@@ -37,15 +32,6 @@ class TokenAuthentication:
         self.request = request
         self.token = token
 
-    # def authenticate(self):
-    #     email = self._get_user_email_from_token()
-
-    #     user = get_user(email)
-
-    #     if not user:
-    #         raise InvalidToken
-
-    #     return user
 
     async def authenticate(self):
         email = self._get_user_email_from_token()
@@ -76,10 +62,6 @@ def get_auth_header(request):
         return None
     token = " ".join(parts[1:])
     return token
-
-
-# def get_user(email):
-#     return User.objects.filter(email=email).first()
 
 
 async def get_user(email):

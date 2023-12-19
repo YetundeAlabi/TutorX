@@ -2,6 +2,7 @@ import http
 import traceback
 
 from django.conf import settings
+from django.core.exceptions import ValidationError
 
 from ninja import NinjaAPI
 from ninja.errors import AuthenticationError
@@ -53,6 +54,11 @@ def unauthenticated_exception_handler(request, exc):
 @api.exception_handler(ExpiredTokenError)
 def expired_token_exception_handler(request, exc):
     return exception_handler_base(request, exc, "Session has expired. Please log in again", status=401)
+
+
+@api.exception_handler(ValidationError)
+def exception_handler(request, exc):
+    return exception_handler_base(request, exc, msg="Validation error. There is can be only one organisation instance", status=400)
 
 
 @api.exception_handler(Exception)

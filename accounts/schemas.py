@@ -4,9 +4,11 @@ class TokenSchema(Schema):
     access: str
     refresh: str = None
 
+
 class LoginSchema(Schema):
     email: str
     password : str
+
 
 class TeacherSchema(Schema):
     first_name: str
@@ -23,17 +25,21 @@ class AttendenceSchema(Schema):
 
 
 class PromotionSchema(Schema):
-    salary_cycle_id : int
     email : str
     is_promoted: bool = True
     level_id : int
 
 
 class DemotionSchema(Schema):
-    salary_cycle_id : int
     email : str
     is_demoted: bool = True
     level_id : int
+    demotion_reason: str
 
+
+class OrganisationSchema(Schema):
+    name: str
+    work_hour_per_day: int
+    overtime_percent: int
 
    

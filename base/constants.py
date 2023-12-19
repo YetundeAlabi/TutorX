@@ -1,5 +1,3 @@
-PRESENT = "Present"
-ABSENT = "Absent"
 AUTH_HEADER = "Authorization"
 AUTH_SCHEME = "bearer"
 ISSUER = "ISSUER"

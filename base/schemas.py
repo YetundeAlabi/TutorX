@@ -1,11 +1,10 @@
 from ninja import Schema
-from typing import Any
+from typing import Union
 
 
 class Success(Schema):
     message: str
-    # data: Any = None
 
 
 class Error(Schema):
-    error: str
+    error: Union[str, list]

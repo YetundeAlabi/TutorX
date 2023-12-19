@@ -1,11 +1,29 @@
 from django.db import models
 from django.contrib.auth import get_user_model
+from django.core.exceptions import ValidationError
 
 from base.models import BaseModel
-from payments.models import Level, SalaryCycle
+from payments.models import Level
 # Create your models here.
 
 User = get_user_model()
+
+
+class Organisation(BaseModel):
+    name = models.CharField(max_length=150, unique=True)
+    work_hour_per_day = models.PositiveIntegerField()
+    overtime_percent = models.PositiveIntegerField()
+
+    def save(self, *args, **kwargs):
+        # Ensure only one instance exists
+        if not self.pk and Organisation.objects.exists():
+            # if check for self.pk so error will not be raised in the update of exists model
+            raise ValidationError(
+                'There is can be only one organisation instance')
+        return super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return self.name
 
 
 class Admin(BaseModel):
@@ -35,16 +53,15 @@ class Attendance(BaseModel):
     clock_in= models.DateTimeField()
     clock_out = models.DateTimeField(null=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="attendance")
-    present = models.BooleanField(default=True) 
 
     def __str__(self):
         return self.teacher.email
     
 
 class PromotionDemotion(BaseModel):
-    salary_cycle = models.ForeignKey(SalaryCycle, on_delete=models.CASCADE)
+    date = models.DateField(auto_now_add=True)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     is_promoted = models.BooleanField(default=False)
     is_demoted = models.BooleanField(default=False)
-    level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, related_name="promotion_level")
-    
+    level = models.ForeignKey(Level, on_delete=models.SET_NULL, null=True, related_name="promotion_demotion")
+    demotion_reason = models.CharField(max_length=255, null=True, blank=True)

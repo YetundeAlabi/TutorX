@@ -11,9 +11,14 @@ app = Celery('tutorX')
 app.config_from_object('django.conf:settings', namespace='CELERY')
 app.autodiscover_tasks()
 
-#send teacher salary pay slip at 9.00am on salary cycle end_date
+# send teacher salary pay slip at 9.00am on the first_day_of the month
 app.conf.beat_schedule = {
-    "send_payment_slip_for_teacher_on_salary_cycle_end_date": {
+    "send_payment_slip_for_teacher_on_the_first_day_of_the_month": {
         "task": 'payments.tasks.send_teacher_pay_slip',
-        'schedule': crontab(minute=0, hour=11),
+        'schedule': crontab(hour=9, minute=0, day_of_month=1),
     }}
+
+
+@app.task(bind=True, ignore_result=True)
+def debug_task(self):
+    print(f'Request: {self.request!r}')

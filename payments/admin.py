@@ -1,12 +1,6 @@
 from django.contrib import admin
 
-# Register your models here.
-from .models import SalaryCycle, Level
-
-@admin.register(SalaryCycle)
-class SalaryCycleModelAdmin(admin.ModelAdmin):
-    list_display = ('id', 'start_date', 'end_date', 'average_work_hour')
-
+from .models import Level
 
 @admin.register(Level)
 class LevelAdmin(admin.ModelAdmin):
