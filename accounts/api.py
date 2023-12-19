@@ -167,18 +167,24 @@ async def bulk_upload_teachers(request, file: UploadedFile = File(...)):
     if headers != expected_headers:
         return 400, {"error": f"Invalid CSV file. Headers do not match. Expected headers: {', '.join(expected_headers)}"}
 
-    # errors = []
+    errors = []
     for row in reader:
         # check if level_name exists
         try:
             level = await Level.active_objects.aget(name__iexact=row[3])
         except Level.DoesNotExist:
-            return 400, {'error': f'Level with {row[3]} does not exist'}
-        
-        await Teacher.active_objects.aget_or_create(first_name=row[0], last_name=row[1], email=row[2], level=level,
-                                                                  account_number=row[4], bank=row[5], account_name=[6])
+            errors.append(f'Level with {row[3]} does not exist')
+        try:
+            await Teacher.active_objects.aget_or_create(first_name=row[0], last_name=row[1], email=row[2], level=level,
+                                                                  account_number=row[4], bank=row[5], account_name=row[6])
+        except Exception as e:
+            errors.append(f'Error creating teacher {row[0]}: {str(e)}')
 
-        return 200, {"message": "Teacher created successfully"}
+    if errors:
+        return 400, {'error': errors}
+    
+    return 200, {"message": "Teachers created successfully"}
+
 
 
 @router.post('/attendance', response={200: Success, codes_4xx: Error}, auth=None)
